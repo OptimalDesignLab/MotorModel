@@ -3,8 +3,8 @@ import copy
 import openmdao.api as om
 from mphys import Builder
 
-from mach import PDESolver, MeshWarper
-from mach import MachState, MachMeshWarper, MachFunctional, MachMeshGroup
+from miso import PDESolver, MeshWarper
+from miso import MISOState, MISOMeshWarper, MISOFunctional, MISOMeshGroup
 
 from .average_comp import AverageComp
 from .maximum_fit import DiscreteInducedExponential
@@ -24,14 +24,14 @@ class EMStateAndFluxMagGroup(om.Group):
         self.check_partials = self.options["check_partials"]
 
         self.add_subsystem("state",
-                           MachState(solver=self.solver,
+                           MISOState(solver=self.solver,
                                      depends=depends,
                                      check_partials=self.check_partials),
                            promotes_inputs=[("mesh_coords", "x_em_vol"), *depends[1:]],
                            promotes_outputs=[("state", "em_state")])
 
         self.add_subsystem("flux_magnitude",
-                           MachFunctional(solver=self.solver,
+                           MISOFunctional(solver=self.solver,
                                           func="flux_magnitude",
                                           depends=["state", "mesh_coords"],
                                           check_partials=self.check_partials),
@@ -40,7 +40,7 @@ class EMStateAndFluxMagGroup(om.Group):
         
         # # Flux density used for demagnetization proximity constraint
         # self.add_subsystem("flux_density",
-        #                    MachFunctional(solver=self.solver,
+        #                    MISOFunctional(solver=self.solver,
         #                                   func="flux_density",
         #                                   depends=["state", "mesh_coords"],
         #                                   check_partials=self.check_partials),
@@ -92,7 +92,7 @@ class EMMotorCouplingGroup(om.Group):
         # If coupling to thermal solver, compute heat sources...
         if coupled == "thermal" or coupled == "thermal:feedforward":
             # self.add_subsystem("stator_max_flux_magnitude",
-            #                    MachFunctional(solver=self.solvers[0],
+            #                    MISOFunctional(solver=self.solvers[0],
             #                                   func="max_flux_magnitude:stator",
             #                                   func_options={"rho": 1, "attributes": [1]},
             #                                   depends=["state", "mesh_coords"]),
@@ -101,7 +101,7 @@ class EMMotorCouplingGroup(om.Group):
             #                    promotes_outputs=["max_flux_magnitude:stator"])
 
             # self.add_subsystem("stator_max_flux_magnitude",
-            #                    MachFunctional(solver=self.solvers[0],
+            #                    MISOFunctional(solver=self.solvers[0],
             #                                   func="max_state:stator",
             #                                   func_options={
             #                                     "rho": 10,
@@ -132,7 +132,7 @@ class EMMotorCouplingGroup(om.Group):
                                   "num_turns",
                                   "num_slots"]
             self.add_subsystem("heat_source",
-                               MachFunctional(solver=self.solvers[0],
+                               MISOFunctional(solver=self.solvers[0],
                                               func="heat_source",
                                               func_options={
                                                   "dc_loss": {
@@ -174,7 +174,7 @@ class EMMotorPrecouplingGroup(om.Group):
         # # Promote variables with physics-specific tag that MPhys expects
         if isinstance(self.warper, MeshWarper):
             self.add_subsystem("mesh_warper",
-                               MachMeshWarper(warper=self.warper),
+                               MISOMeshWarper(warper=self.warper),
                                promotes_inputs=[("surf_mesh_coords", "x_em")],
                                promotes_outputs=[("vol_mesh_coords", "x_em_vol")])
 
@@ -234,7 +234,7 @@ class EMMotorOutputsGroup(om.Group):
             }
 
             torque.add_subsystem(f"torque{idx}",
-                                 MachFunctional(solver=solver,
+                                 MISOFunctional(solver=solver,
                                                 func="torque",
                                                 func_options=torque_opts,
                                                 depends=["state", "mesh_coords"],
@@ -257,7 +257,7 @@ class EMMotorOutputsGroup(om.Group):
 
         # airgap_attrs = solver.getOptions()["components"]["airgap"]["attrs"]
         # self.add_subsystem("raw_energy",
-        #                    MachFunctional(solver=self.solvers[0],
+        #                    MISOFunctional(solver=self.solvers[0],
         #                                   func="energy",
         #                                   func_options={"attributes": airgap_attrs},
         #                                   depends=["state", "mesh_coords"],
@@ -272,7 +272,7 @@ class EMMotorOutputsGroup(om.Group):
 
         # # winding_attrs = self.solvers[0].getOptions()["components"]["windings"]["attrs"]
         # # self.add_subsystem("winding_max_flux_magnitude",
-        # #                    MachFunctional(solver=self.solvers[0],
+        # #                    MISOFunctional(solver=self.solvers[0],
         # #                                   func="max_flux_magnitude:winding",
         # #                                   func_options={"rho": 50, "attributes": winding_attrs},
         # #                                   depends=["state", "mesh_coords"]),
@@ -282,7 +282,7 @@ class EMMotorOutputsGroup(om.Group):
 
         airgap_attrs = self.solvers[0].getOptions()["components"]["airgap"]["attrs"]
         self.add_subsystem("airgap_average_flux_magnitude",
-                           MachFunctional(solver=self.solvers[0],
+                           MISOFunctional(solver=self.solvers[0],
                                           func="average_flux_magnitude:airgap",
                                           func_options={"attributes": airgap_attrs},
                                           depends=["state", "mesh_coords"],
@@ -304,7 +304,7 @@ class EMMotorOutputsGroup(om.Group):
 
         winding_attrs = self.solvers[0].getOptions()["components"]["windings"]["attrs"]
         self.add_subsystem("ac_loss",
-                           MachFunctional(solver=self.solvers[0],
+                           MISOFunctional(solver=self.solvers[0],
                                           func="ac_loss",
                                           func_options={"attributes": winding_attrs},
                                           depends=ac_loss_depends,
@@ -331,7 +331,7 @@ class EMMotorOutputsGroup(om.Group):
 
 
         # self.add_subsystem("winding_max_peak_flux",
-        #                    MachFunctional(solver=self.solvers[0],
+        #                    MISOFunctional(solver=self.solvers[0],
         #                                   func="max_state",
         #                                   func_options={
         #                                       "rho": 1,
@@ -349,7 +349,7 @@ class EMMotorOutputsGroup(om.Group):
         # if coupled != "thermal" and coupled != "thermal_full": # TODO: Change conditional logic to separate one way and fully coupled
             # stator_attrs = self.solvers[0].getOptions()["components"]["stator"]["attrs"]
             # self.add_subsystem("stator_max_flux_magnitude",
-            #                     MachFunctional(solver=self.solvers[0],
+            #                     MISOFunctional(solver=self.solvers[0],
             #                                    func="max_flux_magnitude:stator",
             #                                    func_options={"rho": 10, "attributes": stator_attrs},
             #                                    depends=["state", "mesh_coords"],
@@ -358,7 +358,7 @@ class EMMotorOutputsGroup(om.Group):
             #                                      ("state", "em_state0")],
             #                     promotes_outputs=["max_flux_magnitude:stator"])
             # self.add_subsystem("stator_max_flux_magnitude",
-            #                    MachFunctional(solver=self.solvers[0],
+            #                    MISOFunctional(solver=self.solvers[0],
             #                                   func="max_state:stator",
             #                                   func_options={
             #                                     "rho": 10,
@@ -386,7 +386,7 @@ class EMMotorOutputsGroup(om.Group):
         }
         print(stator_core_loss_options)
         self.add_subsystem("stator_core_loss_raw",
-                           MachFunctional(solver=self.solvers[0],
+                           MISOFunctional(solver=self.solvers[0],
                                           func="core_loss",
                                           func_options=stator_core_loss_options,
                                           depends=core_loss_depends,
@@ -399,7 +399,7 @@ class EMMotorOutputsGroup(om.Group):
                            promotes=["*"])
 
         # self.add_subsystem("stator_mass_raw",
-        #                    MachFunctional(solver=self.solvers[0],
+        #                    MISOFunctional(solver=self.solvers[0],
         #                                   func="mass:stator",
         #                                   func_options=stator_core_loss_options,
         #                                   depends=["mesh_coords"],
@@ -412,7 +412,7 @@ class EMMotorOutputsGroup(om.Group):
         #                    promotes=["*"])
 
         self.add_subsystem("motor_mass_raw",
-                           MachFunctional(solver=self.solvers[0],
+                           MISOFunctional(solver=self.solvers[0],
                                           func="mass:motor",
                                           depends=["mesh_coords", "fill_factor"],
                                           check_partials=self.check_partials),
@@ -424,7 +424,7 @@ class EMMotorOutputsGroup(om.Group):
                            promotes=["*"])
 
         # self.add_subsystem("stator_volume_raw",
-        #                    MachFunctional(solver=self.solvers[0],
+        #                    MISOFunctional(solver=self.solvers[0],
         #                                   func="volume:stator",
         #                                   func_options=stator_core_loss_options,
         #                                   depends=["mesh_coords"],
@@ -449,7 +449,7 @@ class EMMotorOutputsGroup(om.Group):
                            om.ExecComp("motor_efficiency = motor_power_out / motor_power_in"),
                            promotes=["*"])
         
-        # TODO: In parallel, adding mach output for permanent magnet demagnetization constraint. Adjust as needed
+        # TODO: In parallel, adding miso output for permanent magnet demagnetization constraint. Adjust as needed
         """
         pm_demag_depends = ["mesh_coords",
                             "peak_flux"]
@@ -460,7 +460,7 @@ class EMMotorOutputsGroup(om.Group):
         }
 
         self.add_subsystem("pm_demag",
-                           MachFunctional(solver=self.solvers[0],
+                           MISOFunctional(solver=self.solvers[0],
                                           func="pm_demag",
                                           func_options=pm_demag_options,
                                           depends=pm_demag_depends,
@@ -470,17 +470,17 @@ class EMMotorOutputsGroup(om.Group):
         """
 
         # # TODO: Change the depends as needed
-        # # Mach output for demagnetization proximity using Induced Exponential Aggregation (smooth max) function
+        # # MISO output for demagnetization proximity using Induced Exponential Aggregation (smooth max) function
         # magnets_attrs = self.solvers[0].getOptions()["components"]["magnets"]["attrs"]
         # self.add_subsystem("demag_proximity",
-        #                        MachFunctional(solver=self.solvers[0],
+        #                        MISOFunctional(solver=self.solvers[0],
         #                                       func="max_state:magnets",
         #                                       func_options={
         #                                         "rho": 10,
         #                                         "attributes": magnets_attrs,
         #                                         "state": "demag_proximity"
         #                                       },
-        #                                       depends=["state", "mesh_coords"], #"flux_density"], including flux density as a depends causes B to be [1,1] exclusively in mach
+        #                                       depends=["state", "mesh_coords"], #"flux_density"], including flux density as a depends causes B to be [1,1] exclusively in miso
         #                                       check_partials=self.check_partials),
         #                        promotes_inputs=[("mesh_coords", "x_em_vol"),
         #                                         ("state", "pm_demag_field")],
@@ -492,7 +492,7 @@ class EMMotorOutputsGroup(om.Group):
         #     "attributes": self.solvers[0].getOptions()["components"]["rotor"]["attrs"]
         # }
         # self.add_subsystem("rotor_core_loss",
-        #                    MachFunctional(solver=self.solvers[0],
+        #                    MISOFunctional(solver=self.solvers[0],
         #                                   func="core_loss",
         #                                   func_options=rotor_core_loss_options,
         #                                   depends=core_loss_depends),
@@ -503,7 +503,7 @@ class EMMotorOutputsGroup(om.Group):
         #     "attributes": self.solvers[0].getOptions()["components"]["magnets"]["attrs"]
         # }
         # self.add_subsystem("magnet_core_loss",
-        #                    MachFunctional(solver=self.solvers[0],
+        #                    MISOFunctional(solver=self.solvers[0],
         #                                   func="core_loss",
         #                                   func_options=magnet_core_loss_options,
         #                                   depends=core_loss_depends),
@@ -560,7 +560,7 @@ class EMMotorBuilder(Builder):
                                     scenario_name=scenario_name)
 
     def get_mesh_coordinate_subsystem(self, scenario_name=None):
-        return MachMeshGroup(solver=self.solvers[0],
+        return MISOMeshGroup(solver=self.solvers[0],
                              warper=self.warper,
                              scenario_name=scenario_name)
 
@@ -637,7 +637,7 @@ if __name__ == "__main__":
     #     def test_em_state_and_flux_mag_group(self):
     #         prob = om.Problem()
     #         prob.model.add_subsystem("state", 
-    #                                  MachState(solver=self.solver,
+    #                                  MISOState(solver=self.solver,
     #                                            depends=self.state_depends,
     #                                            check_partials=True),
     #                                  promotes_inputs=[("mesh_coords", "x_em_vol"), *self.state_depends[1:]],
@@ -655,7 +655,7 @@ if __name__ == "__main__":
     #         }
 
     #         prob.model.add_subsystem("torque",
-    #                                  MachFunctional(solver=self.solver,
+    #                                  MISOFunctional(solver=self.solver,
     #                                                 func="torque",
     #                                                 func_options=torque_opts,
     #                                                 depends=["state", "mesh_coords"],
@@ -797,7 +797,7 @@ if __name__ == "__main__":
                                "num_slots"]
             winding_attrs = self.solver.getOptions()["components"]["windings"]["attrs"]
             prob.model.add_subsystem("ac_loss",
-                                    MachFunctional(solver=self.solver,
+                                    MISOFunctional(solver=self.solver,
                                                     func="ac_loss",
                                                     func_options={"attributes": winding_attrs},
                                                     depends=ac_loss_depends,

@@ -1,7 +1,7 @@
 import openmdao.api as om
 import numpy as np
 
-from mach import PDESolver, MachFunctional
+from miso import PDESolver, MISOFunctional
 
 class WireLength(om.ExplicitComponent):
     def setup(self):
@@ -70,7 +70,7 @@ class DCLoss(om.Group):
     def initialize(self):
         self.options.declare("solver",
                              types=PDESolver,
-                             desc="the mach solver object itself",
+                             desc="the miso solver object itself",
                              recordable=False)
         self.options.declare("check_partials", default=False)
 
@@ -88,7 +88,7 @@ class DCLoss(om.Group):
                            "strands_in_hand",
                            "wire_length"]
         self.add_subsystem("dc_loss",
-                            MachFunctional(solver=self.options["solver"],
+                            MISOFunctional(solver=self.options["solver"],
                                            func="dc_loss",
                                            depends=dc_loss_depends,
                                            check_partials=self.check_partials),

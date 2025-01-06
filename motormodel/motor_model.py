@@ -2,7 +2,7 @@ import openmdao.api as om
 from mphys import Multipoint
 from omESP import omESP
 
-from mach import MachBuilder
+from miso import MISOBuilder
 
 from .scenario_motor import ScenarioMotor
 from .motor_em_builder import EMMotorBuilder
@@ -13,7 +13,7 @@ from .tms import ThermalManagementSystem
 
 try:
     from collections.abc import Mapping
-except ImportErrror:
+except ImportError:
     from collections import Mapping
 
 def _nested_update(source, overrides):
@@ -226,7 +226,7 @@ class Motor(Multipoint):
 
             # print(f"max winding temp attrs: {_thermal_options['components']['windings']['attrs']}")
 
-            thermal_builder = MachBuilder(solver_type="thermal",
+            thermal_builder = MISOBuilder(solver_type="thermal",
                                           solver_options=_thermal_options,
                                           solver_inputs=[
                                               "h",
@@ -269,7 +269,7 @@ class Motor(Multipoint):
         # self.connect("x_surf", "x_em_vol")
 
         # TODO: Determine if this is OK
-        # Could not find any instances of "x_conduct" in MotorModel files or mach repo. Was causing error by virtue of it not existing, so commented out.
+        # Could not find any instances of "x_conduct" in MotorModel files or miso repo. Was causing error by virtue of it not existing, so commented out.
         # if coupled == "thermal":
         #     self.connect("x_surf", "x_conduct")
 
